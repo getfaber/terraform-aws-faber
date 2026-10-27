@@ -1,0 +1,30 @@
+name: Bug report
+description: Something in the module doesn't work as described.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please don't include credentials, account IDs, ARNs or other details of your environment.
+        For security problems, see SECURITY.md instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you ran, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Error output
+      description: Relevant output from terraform, with account IDs and other sensitive values removed.
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Module version, Terraform or OpenTofu version, and aws provider version.
+      placeholder: module 1.0.0, Terraform 1.9.8, aws 6.20.0
+    validations:
+      required: true
