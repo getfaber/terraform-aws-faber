@@ -76,6 +76,34 @@ run "rejects_bucket_too_long_for_log_bucket" {
   expect_failures = [var.bucket_name]
 }
 
+run "rejects_double_dash_bucket" {
+  command = plan
+
+  variables {
+    bucket_name = "acme--content"
+  }
+
+  expect_failures = [var.bucket_name]
+}
+
+run "accepts_58_character_bucket" {
+  command = plan
+
+  variables {
+    bucket_name = "a234567890123456789012345678901234567890123456789012345678"
+  }
+}
+
+run "rejects_59_character_bucket" {
+  command = plan
+
+  variables {
+    bucket_name = "a2345678901234567890123456789012345678901234567890123456789"
+  }
+
+  expect_failures = [var.bucket_name]
+}
+
 run "rejects_rotation_below_90_days" {
   command = plan
 

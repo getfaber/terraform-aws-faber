@@ -52,7 +52,7 @@ locals {
           Effect    = "Allow"
           Action    = ["kms:Decrypt", "kms:GenerateDataKey"]
           Resource  = aws_kms_key.this.arn
-          Condition = { StringEquals = { "kms:ViaService" = "s3.${local.region}.amazonaws.com" } }
+          Condition = { StringEquals = { "kms:ViaService" = "s3.${local.region}.${local.dns_suffix}" } }
         },
       ],
       # Cross-region inference profiles route to the foundation model in other

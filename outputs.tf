@@ -9,6 +9,7 @@ output "handoff" {
     kms_key_arn           = aws_kms_key.this.arn
     bedrock_enabled       = var.enable_bedrock
     faber_access_enabled  = var.faber_access_enabled
+    access_logging        = var.enable_access_logging
     faber_service_account = var.faber_service_account
     module_version        = local.module_version
   }

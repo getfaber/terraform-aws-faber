@@ -11,7 +11,15 @@ mock_provider "aws" {
 
   mock_data "aws_partition" {
     defaults = {
-      partition = "aws"
+      partition  = "aws"
+      dns_suffix = "amazonaws.com"
+    }
+  }
+
+  mock_data "aws_region" {
+    defaults = {
+      region = "us-east-2"
+      name   = "us-east-2"
     }
   }
 

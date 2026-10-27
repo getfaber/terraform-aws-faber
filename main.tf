@@ -153,16 +153,57 @@ resource "aws_s3_bucket_lifecycle_configuration" "this" {
 
 resource "aws_s3_bucket_policy" "this" {
   bucket = aws_s3_bucket.this.id
+  # Uploads must use the bucket's key, so disabling it really locks the content
+  # and every use shows up against it. Requests that send no encryption headers
+  # get the bucket default; requests that ask for SSE-S3, another key, or
+  # aws:kms without a key ID (which would mean the AWS managed aws/s3 key) are
+  # refused. Each case is its own statement because conditions in one
+  # statement must all match.
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Sid       = "DenyInsecureTransport"
-      Effect    = "Deny"
-      Principal = "*"
-      Action    = "s3:*"
-      Resource  = [aws_s3_bucket.this.arn, "${aws_s3_bucket.this.arn}/*"]
-      Condition = { Bool = { "aws:SecureTransport" = "false" } }
-    }]
+    Statement = [
+      {
+        Sid       = "DenyInsecureTransport"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource  = [aws_s3_bucket.this.arn, "${aws_s3_bucket.this.arn}/*"]
+        Condition = { Bool = { "aws:SecureTransport" = "false" } }
+      },
+      {
+        Sid       = "DenyOtherEncryption"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.this.arn}/*"
+        Condition = {
+          Null            = { "s3:x-amz-server-side-encryption" = "false" }
+          StringNotEquals = { "s3:x-amz-server-side-encryption" = "aws:kms" }
+        }
+      },
+      {
+        Sid       = "DenyOtherKeys"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.this.arn}/*"
+        Condition = {
+          Null            = { "s3:x-amz-server-side-encryption-aws-kms-key-id" = "false" }
+          StringNotEquals = { "s3:x-amz-server-side-encryption-aws-kms-key-id" = aws_kms_key.this.arn }
+        }
+      },
+      {
+        Sid       = "DenyAwsManagedKey"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.this.arn}/*"
+        Condition = {
+          StringEquals = { "s3:x-amz-server-side-encryption" = "aws:kms" }
+          Null         = { "s3:x-amz-server-side-encryption-aws-kms-key-id" = "true" }
+        }
+      },
+    ]
   })
 
   depends_on = [aws_s3_bucket_public_access_block.this]

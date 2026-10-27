@@ -3,7 +3,10 @@ locals {
 
   account_id = data.aws_caller_identity.current.account_id
   partition  = data.aws_partition.current.partition
-  region     = aws_s3_bucket.this.region
+  dns_suffix = data.aws_partition.current.dns_suffix
+  # aws 6.x renamed the region's "name" to "region" and deprecated "name";
+  # lookup reads whichever exists without a deprecation warning.
+  region = lookup(data.aws_region.current, "region", lookup(data.aws_region.current, "name", null))
 
   tags = merge(var.tags, {
     managed-by = "faber-terraform"
@@ -20,3 +23,5 @@ locals {
 data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
+
+data "aws_region" "current" {}

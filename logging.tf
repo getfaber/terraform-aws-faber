@@ -50,8 +50,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
 
   bucket = aws_s3_bucket.logs[0].id
 
+  # CloudTrail writes few, large objects, so S3 bucket keys would save little,
+  # and they change the encryption context KMS sees for the trail's writes.
   rule {
-    bucket_key_enabled = true
+    bucket_key_enabled = false
 
     apply_server_side_encryption_by_default {
       sse_algorithm     = "aws:kms"

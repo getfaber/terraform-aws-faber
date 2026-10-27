@@ -5,6 +5,7 @@ variable "bucket_name" {
   validation {
     condition = (
       can(regex("^[a-z0-9][a-z0-9-]{1,56}[a-z0-9]$", var.bucket_name)) &&
+      !strcontains(var.bucket_name, "--") &&
       !startswith(var.bucket_name, "xn--") &&
       !startswith(var.bucket_name, "sthree-") &&
       !startswith(var.bucket_name, "amzn-s3-demo-") &&
@@ -13,7 +14,7 @@ variable "bucket_name" {
       !endswith(var.bucket_name, "--x-s3") &&
       !endswith(var.bucket_name, "--table-s3")
     )
-    error_message = "bucket_name must be 3-58 characters of lowercase letters, digits or dashes, start and end with a letter or digit, and not use a prefix or suffix S3 reserves (such as \"xn--\" or \"-s3alias\"). The limit is 58 so the \"-logs\" bucket name still fits."
+    error_message = "bucket_name must be 3-58 characters of lowercase letters, digits or dashes, start and end with a letter or digit, have no double dashes, and not use a prefix or suffix S3 reserves (such as \"xn--\" or \"-s3alias\"). The limit is 58 so the \"-logs\" bucket name still fits."
   }
 }
 

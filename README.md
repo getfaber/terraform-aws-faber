@@ -4,7 +4,7 @@ Terraform module that sets up an AWS account to hold your [Faber](https://www.ge
 
 The module creates:
 
-- a private, versioned **S3 bucket** that's encrypted by default with your key, with all public access blocked and TLS required
+- a private, versioned **S3 bucket** encrypted with your key, with all public access blocked, TLS required, and uploads that ask for any other key refused
 - an **AWS KMS key** that rotates every 90 days
 - an **IAM role** that only your Faber workspace's service account can assume, with read, write and delete access to objects in that bucket and nothing else
 - a **CloudTrail trail** that records every read and write on the bucket and every use of the key, in a separate private log bucket (optional, on by default)
@@ -46,10 +46,11 @@ See [`examples/`](https://github.com/getfaber/terraform-aws-faber/tree/main/exam
 - **Use an account just for Faber if you can.** The trail records the whole account's management events, in every region, as well as the bucket's object-level events.
   - The first trail in an account records management events for free. A second copy, for example if you already have a trail, costs about $2 per 100,000 events.
   - Object-level events on the bucket cost about $0.10 per 100,000.
+  - The KMS key costs $1 a month, plus $1 a month for each of its first two rotations, so about $3 a month after six months with 90-day rotation.
   - If an organization trail already covers the account, set `enable_access_logging = false` and add a data-event selector for `arn:aws:s3:::<bucket_name>/` to that trail.
 - **Service control policies.** If your organization uses them, make sure they allow `sts:AssumeRoleWithWebIdentity` for the Faber role, S3 and KMS on the bucket and key, and Bedrock if you turn it on.
 - **Permissions boundaries.** If new roles in your account need one, set `role_permissions_boundary`. The boundary must allow everything the role's policy grants.
-- **Claude on Amazon Bedrock.** The first time your account uses Anthropic's models, AWS asks an admin to fill in a one-time use-case form in the Bedrock console. Faber calls Claude through cross-region inference profiles, so the role can invoke the models in any region a profile routes to.
+- **Claude on Amazon Bedrock.** Before you turn AI on, have an admin open each Claude model Faber uses in the Bedrock console playground and run it once. The first use of an Anthropic model in an account needs a one-time use-case form and an AWS Marketplace subscription, which the Faber role isn't allowed to start. Faber calls Claude through cross-region inference profiles, so the role can invoke the models in any region a profile routes to.
 - **Names are permanent.** Bucket names are global and fixed. With access logging on, the module also creates `<bucket_name>-logs`, so `bucket_name` can be at most 58 characters.
 - **Who runs it.** Whoever applies the module needs rights to manage S3 buckets and their policies, KMS keys, IAM roles and CloudTrail trails, for example `AdministratorAccess` in the account.
 
@@ -63,7 +64,8 @@ You can also disable the KMS key, which locks you out of the content too until y
 
 - The bucket and key have `prevent_destroy`, and the bucket has `force_destroy = false`. `terraform destroy` stops with an error instead of removing them. To really remove them, take them out of state or delete the `lifecycle` blocks in your own copy.
 - **Scheduling the key for deletion makes the data unreadable once the 30-day waiting period ends, for you as well as for Faber.**
-- Old object versions are kept for `noncurrent_version_retention_days` (30 by default), and at most 4 previous versions of an object are kept.
+- Old object versions are kept for `noncurrent_version_retention_days` (30 by default). Once an object has more than 4 previous versions, the extra older ones are removed after a day.
+- Uploads that ask for SSE-S3, another KMS key, or the AWS managed `aws/s3` key are refused, so everything in the bucket is encrypted with your key. Uploads that send no encryption headers get your key by default.
 - The log bucket also has `force_destroy = false`, so turning access logging off later fails while the bucket still holds logs. Empty it first, or keep it by removing `module.faber.aws_s3_bucket.logs[0]` and its settings from state.
 - Check with Faber before you change the bucket's permissions or lifecycle rules, move or rename it, or disable or delete the key.
 
@@ -92,6 +94,7 @@ Sessions last at most an hour. The role can use the key only through S3 in the b
 - **`BucketAlreadyExists`**: another AWS account already uses that bucket name. Pick a different `bucket_name`.
 - **`AccessDenied` creating the role or its policy**: a service control policy or a required permissions boundary is blocking it. See "Before you apply".
 - **`InsufficientS3BucketPolicyException` creating the trail** on the first apply: S3 hasn't finished applying the log bucket policy yet. Wait a minute and run `terraform apply` again.
+- **`AccessDeniedException` from Bedrock in Faber** right after you turn AI on: the model hasn't been used in your account yet. Run it once in the Bedrock console playground. See "Before you apply".
 - **`Instance cannot be destroyed`**: that's `prevent_destroy` protecting the bucket and key. See Safety.
 
 <!-- BEGIN_TF_DOCS -->
