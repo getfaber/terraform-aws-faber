@@ -1,0 +1,13 @@
+name: Question
+description: Ask about setting up Faber in your AWS account.
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: Please don't include credentials, account IDs, ARNs or other details of your environment.
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true
